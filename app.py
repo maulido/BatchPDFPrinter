@@ -8,6 +8,12 @@ import customtkinter as ctk
 from tkinter import filedialog, messagebox
 import win32print
 from pypdf import PdfWriter, PdfReader
+from io import BytesIO
+try:
+    from reportlab.pdfgen import canvas
+    from reportlab.lib.colors import Color
+except ImportError:
+    pass
 from tkinterdnd2 import TkinterDnD, DND_FILES
 
 class TkinterDnD_CTk(ctk.CTk, TkinterDnD.DnDWrapper):
@@ -178,6 +184,12 @@ class BatchPDFPrinterApp(TkinterDnD_CTk):
         self.color_var = ctk.StringVar(value="Color")
         self.scale_var = ctk.StringVar(value="Fit to Printable Area")
         self.duplex_var = ctk.StringVar(value="1-Sided (Simplex)")
+        
+        # Watermark Variables
+        self.watermark_enabled_var = ctk.BooleanVar(value=False)
+        self.watermark_text_var = ctk.StringVar(value="CONFIDENTIAL")
+        self.watermark_color_var = ctk.StringVar(value="Red")
+        self.watermark_opacity_var = ctk.DoubleVar(value=0.3)
         self.single_job_var = ctk.BooleanVar(value=False)
         self.pause_event = threading.Event()
         self.pause_event.set()
@@ -218,15 +230,18 @@ class BatchPDFPrinterApp(TkinterDnD_CTk):
         # Table Header
         self.table_header = ctk.CTkFrame(self.listbox_frame, fg_color="transparent")
         self.table_header.grid(row=0, column=0, padx=10, pady=(5, 5), sticky="ew")
-        self.table_header.grid_columnconfigure(0, weight=1) # Filename
-        self.table_header.grid_columnconfigure(1, minsize=80) # Pages
-        self.table_header.grid_columnconfigure(2, minsize=130) # Date
-        self.table_header.grid_columnconfigure(3, minsize=80) # Actions
+        self.table_header.grid_columnconfigure(0, minsize=30)  # Grip
+        self.table_header.grid_columnconfigure(1, weight=1) # Filename
+        self.table_header.grid_columnconfigure(2, minsize=80) # Pages
+        self.table_header.grid_columnconfigure(3, minsize=130) # Date
+        self.table_header.grid_columnconfigure(4, minsize=80) # Actions
         
-        ctk.CTkLabel(self.table_header, text="File Name", font=ctk.CTkFont(weight="bold")).grid(row=0, column=0, sticky="w", padx=5)
-        ctk.CTkLabel(self.table_header, text="Pages", font=ctk.CTkFont(weight="bold")).grid(row=0, column=1, sticky="w", padx=5)
-        ctk.CTkLabel(self.table_header, text="Date", font=ctk.CTkFont(weight="bold")).grid(row=0, column=2, sticky="w", padx=5)
-        ctk.CTkLabel(self.table_header, text="Actions", font=ctk.CTkFont(weight="bold")).grid(row=0, column=3, sticky="w", padx=5)
+        ctk.CTkLabel(self.table_header, text="").grid(row=0, column=0)
+        # Menambahkan padding kiri 35px agar teks "File Name" sejajar dengan teks checkbox (bukan kotaknya)
+        ctk.CTkLabel(self.table_header, text="File Name", font=ctk.CTkFont(weight="bold")).grid(row=0, column=1, sticky="w", padx=(35, 5))
+        ctk.CTkLabel(self.table_header, text="Pages", font=ctk.CTkFont(weight="bold")).grid(row=0, column=2, sticky="w", padx=5)
+        ctk.CTkLabel(self.table_header, text="Date", font=ctk.CTkFont(weight="bold")).grid(row=0, column=3, sticky="w", padx=5)
+        ctk.CTkLabel(self.table_header, text="Actions", font=ctk.CTkFont(weight="bold")).grid(row=0, column=4, sticky="w", padx=5)
         
         # Placeholder label for empty state
         self.empty_label = ctk.CTkLabel(self.listbox_frame, text="Drop PDF files here\nor use 'Add Documents'", text_color="gray", font=ctk.CTkFont(size=14, slant="italic"))
@@ -282,10 +297,33 @@ class BatchPDFPrinterApp(TkinterDnD_CTk):
         main_frame = ctk.CTkFrame(settings_win, fg_color="transparent")
         main_frame.pack(fill="both", expand=True, padx=20, pady=20)
         
-        # Left side: Form
-        form_frame = ctk.CTkFrame(main_frame, fg_color="transparent")
-        form_frame.pack(side="left", fill="y", padx=(0, 20))
+        # Left side: Form using Tabview
+        self.settings_tabview = ctk.CTkTabview(main_frame)
+        self.settings_tabview.pack(side="left", fill="both", expand=True, padx=(0, 20))
+        
+        tab_general = self.settings_tabview.add("Print Settings")
+        tab_watermark = self.settings_tabview.add("Watermark")
+        
+        form_frame = ctk.CTkScrollableFrame(tab_general, fg_color="transparent")
+        form_frame.pack(fill="both", expand=True)
         form_frame.grid_columnconfigure(1, weight=1)
+        
+        wm_frame = ctk.CTkFrame(tab_watermark, fg_color="transparent")
+        wm_frame.pack(fill="both", expand=True, padx=10, pady=10)
+        wm_frame.grid_columnconfigure(1, weight=1)
+        
+        # Watermark Controls
+        ctk.CTkSwitch(wm_frame, text="Enable Watermark", variable=self.watermark_enabled_var, command=self.update_preview).grid(row=0, column=0, columnspan=2, pady=(0, 20), sticky="w")
+        
+        ctk.CTkLabel(wm_frame, text="Text:").grid(row=1, column=0, pady=10, sticky="e")
+        ctk.CTkEntry(wm_frame, textvariable=self.watermark_text_var).grid(row=1, column=1, padx=10, sticky="ew")
+        self.watermark_text_var.trace_add("write", lambda *args: self.update_preview())
+        
+        ctk.CTkLabel(wm_frame, text="Color:").grid(row=2, column=0, pady=10, sticky="e")
+        ctk.CTkOptionMenu(wm_frame, values=["Red", "Blue", "Black", "Gray"], variable=self.watermark_color_var, command=self.update_preview).grid(row=2, column=1, padx=10, sticky="ew")
+        
+        ctk.CTkLabel(wm_frame, text="Opacity:").grid(row=3, column=0, pady=10, sticky="e")
+        ctk.CTkSlider(wm_frame, from_=0.1, to=1.0, variable=self.watermark_opacity_var, command=self.update_preview).grid(row=3, column=1, padx=10, sticky="ew")
 
         # Copies
         ctk.CTkLabel(form_frame, text="Copies:").grid(row=0, column=0, padx=10, pady=10, sticky="e")
@@ -332,8 +370,8 @@ class BatchPDFPrinterApp(TkinterDnD_CTk):
         ctk.CTkOptionMenu(form_frame, values=["1-Sided (Simplex)", "2-Sided (Long Edge)", "2-Sided (Short Edge)"], variable=self.duplex_var).grid(row=7, column=1, sticky="ew")
 
         # OK Button
-        btn_frame = ctk.CTkFrame(form_frame, fg_color="transparent")
-        btn_frame.grid(row=8, column=0, columnspan=2, pady=20)
+        btn_frame = ctk.CTkFrame(main_frame, fg_color="transparent")
+        btn_frame.pack(side="bottom", fill="x", pady=(20, 0))
         ctk.CTkButton(btn_frame, text="OK", command=settings_win.destroy, width=150).pack()
 
         # Right side: Visual Preview
@@ -372,6 +410,10 @@ class BatchPDFPrinterApp(TkinterDnD_CTk):
                 if "color" in settings: self.color_var.set(settings["color"])
                 if "scale" in settings: self.scale_var.set(settings["scale"])
                 if "duplex" in settings: self.duplex_var.set(settings["duplex"])
+                if "watermark_enabled" in settings: self.watermark_enabled_var.set(settings["watermark_enabled"])
+                if "watermark_text" in settings: self.watermark_text_var.set(settings["watermark_text"])
+                if "watermark_color" in settings: self.watermark_color_var.set(settings["watermark_color"])
+                if "watermark_opacity" in settings: self.watermark_opacity_var.set(settings["watermark_opacity"])
             except Exception as e:
                 print(f"Failed to load settings: {e}")
 
@@ -388,7 +430,11 @@ class BatchPDFPrinterApp(TkinterDnD_CTk):
             "page_range": self.page_range_var.get(),
             "color": self.color_var.get(),
             "scale": self.scale_var.get(),
-            "duplex": self.duplex_var.get()
+            "duplex": self.duplex_var.get(),
+            "watermark_enabled": self.watermark_enabled_var.get(),
+            "watermark_text": self.watermark_text_var.get(),
+            "watermark_color": self.watermark_color_var.get(),
+            "watermark_opacity": self.watermark_opacity_var.get()
         }
         try:
             with open(config_file, "w") as f:
@@ -542,6 +588,40 @@ class BatchPDFPrinterApp(TkinterDnD_CTk):
         for i, item in enumerate(self.file_items):
             item["frame"].grid(row=i+2, column=0, padx=10, pady=2, sticky="ew")
 
+    def on_drag_start(self, event, item_frame):
+        self._dragged_frame = item_frame
+        self._dragged_frame.configure(fg_color=("#E0E0E0", "#37474F")) # Highlight
+        self._drag_start_y = event.y_root
+
+    def on_drag_motion(self, event, item_frame):
+        pass # Visual cues could be added here, but avoiding it to prevent flickering
+
+    def on_drag_release(self, event, item_frame):
+        if hasattr(self, '_dragged_frame') and self._dragged_frame:
+            self._dragged_frame.configure(fg_color="transparent")
+            target_y = event.y_root
+            frames = [item["frame"] for item in self.file_items]
+            
+            target_index = -1
+            for i, frame in enumerate(frames):
+                if frame.winfo_exists():
+                    y_start = frame.winfo_rooty()
+                    y_end = y_start + frame.winfo_height()
+                    if y_start <= target_y <= y_end:
+                        target_index = i
+                        break
+            
+            if target_index != -1:
+                try:
+                    current_index = frames.index(self._dragged_frame)
+                    if current_index != target_index:
+                        item = self.file_items.pop(current_index)
+                        self.file_items.insert(target_index, item)
+                        self._refresh_list()
+                except ValueError:
+                    pass
+            self._dragged_frame = None
+
     def move_up(self, path):
         idx = next((i for i, item in enumerate(self.file_items) if item["path"] == path), -1)
         if idx > 0:
@@ -575,29 +655,39 @@ class BatchPDFPrinterApp(TkinterDnD_CTk):
                     date_str = "Unknown"
                 
                 item_frame = ctk.CTkFrame(self.listbox_frame, fg_color="transparent")
-                item_frame.grid_columnconfigure(0, weight=1)
-                item_frame.grid_columnconfigure(1, minsize=80)
-                item_frame.grid_columnconfigure(2, minsize=130)
-                item_frame.grid_columnconfigure(3, minsize=80)
+                item_frame.grid_columnconfigure(0, minsize=30)
+                item_frame.grid_columnconfigure(1, weight=1)
+                item_frame.grid_columnconfigure(2, minsize=80)
+                item_frame.grid_columnconfigure(3, minsize=130)
+                item_frame.grid_columnconfigure(4, minsize=80)
+                
+                grip_lbl = ctk.CTkLabel(item_frame, text="☰", text_color="gray", cursor="fleur")
+                grip_lbl.grid(row=0, column=0, padx=(5, 0))
                 
                 cb = ctk.CTkCheckBox(item_frame, text=file_name)
-                cb.grid(row=0, column=0, sticky="w", padx=5)
+                cb.grid(row=0, column=1, sticky="w", padx=5)
                 cb.select()  # Checked by default
                 
                 pages_lbl = ctk.CTkLabel(item_frame, text=str(pages))
-                pages_lbl.grid(row=0, column=1, sticky="w", padx=5)
+                pages_lbl.grid(row=0, column=2, sticky="w", padx=5)
                 
                 date_lbl = ctk.CTkLabel(item_frame, text=date_str, text_color="gray")
-                date_lbl.grid(row=0, column=2, sticky="w", padx=5)
+                date_lbl.grid(row=0, column=3, sticky="w", padx=5)
                 
                 action_frame = ctk.CTkFrame(item_frame, fg_color="transparent")
-                action_frame.grid(row=0, column=3, sticky="w", padx=5)
+                action_frame.grid(row=0, column=4, sticky="w", padx=5)
                 
                 up_btn = ctk.CTkButton(action_frame, text="↑", width=30, command=lambda p=f: self.move_up(p))
                 up_btn.pack(side="left", padx=2)
                 
                 down_btn = ctk.CTkButton(action_frame, text="↓", width=30, command=lambda p=f: self.move_down(p))
                 down_btn.pack(side="left", padx=2)
+                
+                # Bind Drag Events
+                for widget in (item_frame, grip_lbl, pages_lbl, date_lbl):
+                    widget.bind("<ButtonPress-1>", lambda e, frm=item_frame: self.on_drag_start(e, frm))
+                    widget.bind("<B1-Motion>", lambda e, frm=item_frame: self.on_drag_motion(e, frm))
+                    widget.bind("<ButtonRelease-1>", lambda e, frm=item_frame: self.on_drag_release(e, frm))
                 
                 self.file_items.append({
                     "path": f,
@@ -683,6 +773,12 @@ class BatchPDFPrinterApp(TkinterDnD_CTk):
             else:
                 # Preview the first checked file
                 pdf_to_preview = files_to_print[0]
+                
+            if self.watermark_enabled_var.get():
+                self.status_var.set("Applying watermark for preview...")
+                self.update_idletasks()
+                pdf_to_preview = self.apply_watermark(pdf_to_preview)
+                self.status_var.set("Ready")
                 
             # Close previous preview if it's still running
             if hasattr(self, 'preview_process') and self.preview_process.poll() is None:
@@ -833,6 +929,16 @@ class BatchPDFPrinterApp(TkinterDnD_CTk):
                 with open(temp_pdf_path, "wb") as f_out:
                     merger.write(f_out)
                     
+                # Apply watermark to the merged file if enabled
+                if self.watermark_enabled_var.get():
+                    self.after(0, update_progress, "Applying watermark...", 0.4)
+                    temp_wm_path = self.apply_watermark(temp_pdf_path)
+                    try:
+                        os.remove(temp_pdf_path)
+                    except:
+                        pass
+                    temp_pdf_path = temp_wm_path
+                    
                 self.after(0, update_progress, "Printing single merged document...", 0.6)
                 cmd = [
                     self.sumatra_path,
@@ -877,6 +983,14 @@ class BatchPDFPrinterApp(TkinterDnD_CTk):
                 self.after(0, update_progress, f"Printing {i+1}/{total}: {filename}", i / total)
                 
                 try:
+                    target_pdf = pdf
+                    is_temp = False
+                    
+                    if self.watermark_enabled_var.get():
+                        self.after(0, update_progress, f"Watermarking {i+1}/{total}: {filename}", i / total)
+                        target_pdf = self.apply_watermark(pdf)
+                        is_temp = True
+                        
                     cmd = [
                         self.sumatra_path,
                         "-print-to",
@@ -885,12 +999,18 @@ class BatchPDFPrinterApp(TkinterDnD_CTk):
                     ]
                     if print_settings_args:
                         cmd.extend(["-print-settings", ",".join(print_settings_args)])
-                    cmd.append(pdf)
+                    cmd.append(target_pdf)
                     
                     # We use creationflags=subprocess.CREATE_NO_WINDOW to hide the console window if any
                     subprocess.run(cmd, check=True, creationflags=subprocess.CREATE_NO_WINDOW)
                     success_count += 1
                     self.print_log.append({"file": filename, "status": "Success", "error": ""})
+                    
+                    if is_temp:
+                        try:
+                            os.remove(target_pdf)
+                        except:
+                            pass
                 except subprocess.CalledProcessError as e:
                     print(f"Failed to print {pdf}: {e}")
                     self.print_log.append({"file": filename, "status": "Failed", "error": f"Return Code {e.returncode}"})
@@ -950,6 +1070,58 @@ class BatchPDFPrinterApp(TkinterDnD_CTk):
                 messagebox.showinfo("Success", "Print log saved successfully!")
             except Exception as e:
                 messagebox.showerror("Error", f"Failed to save log:\n{str(e)}")
+
+    def apply_watermark(self, input_pdf_path):
+        text = self.watermark_text_var.get().strip()
+        if not text:
+            return input_pdf_path
+            
+        color_str = self.watermark_color_var.get()
+        opacity = self.watermark_opacity_var.get()
+        
+        # Parse color
+        if color_str == "Red": r, g, b = 1, 0, 0
+        elif color_str == "Blue": r, g, b = 0, 0, 1
+        elif color_str == "Gray": r, g, b = 0.5, 0.5, 0.5
+        else: r, g, b = 0, 0, 0 # Black
+        
+        try:
+            reader = PdfReader(input_pdf_path)
+            writer = PdfWriter()
+            
+            for page in reader.pages:
+                width = float(page.mediabox.width)
+                height = float(page.mediabox.height)
+                
+                packet = BytesIO()
+                c = canvas.Canvas(packet, pagesize=(width, height))
+                c.translate(width / 2.0, height / 2.0)
+                c.rotate(45)
+                # font size scales with page roughly
+                font_size = min(width, height) / 10
+                c.setFont("Helvetica-Bold", font_size)
+                c.setFillColor(Color(r, g, b, alpha=opacity))
+                c.drawCentredString(0, 0, text)
+                c.save()
+                
+                packet.seek(0)
+                wm_reader = PdfReader(packet)
+                wm_page = wm_reader.pages[0]
+                
+                page.merge_page(wm_page)
+                writer.add_page(page)
+                
+            fd, temp_path = tempfile.mkstemp(suffix="_watermarked.pdf")
+            os.close(fd)
+            with open(temp_path, "wb") as f_out:
+                writer.write(f_out)
+                
+            return temp_path
+        except Exception as e:
+            import traceback
+            error_msg = traceback.format_exc()
+            messagebox.showerror("Watermark Error", f"Watermark failed on {input_pdf_path}:\n{str(e)}\n\n{error_msg}")
+            return input_pdf_path
 
 
 if __name__ == "__main__":

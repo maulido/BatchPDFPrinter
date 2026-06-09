@@ -18,11 +18,12 @@ ArchitecturesInstallIn64BitMode=x64
 Name: "desktopicon"; Description: "Create a &desktop shortcut"; GroupDescription: "Additional icons:"
 
 [Files]
-Source: "dist\BatchPDFPrinter\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "dist\BatchPDFPrinter-Portable.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "icon.ico"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
-Name: "{autoprograms}\Batch PDF Printer"; Filename: "{app}\BatchPDFPrinter.exe"; IconFilename: "{app}\icon.ico"
-Name: "{autodesktop}\Batch PDF Printer"; Filename: "{app}\BatchPDFPrinter.exe"; Tasks: desktopicon; IconFilename: "{app}\icon.ico"
+Name: "{autoprograms}\Batch PDF Printer"; Filename: "{app}\BatchPDFPrinter-Portable.exe"; IconFilename: "{app}\icon.ico"
+Name: "{autodesktop}\Batch PDF Printer"; Filename: "{app}\BatchPDFPrinter-Portable.exe"; Tasks: desktopicon; IconFilename: "{app}\icon.ico"
 
 [Run]
-Filename: "{app}\BatchPDFPrinter.exe"; Description: "Launch Batch PDF Printer"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\BatchPDFPrinter-Portable.exe"; Description: "Launch Batch PDF Printer"; Flags: nowait postinstall skipifsilent

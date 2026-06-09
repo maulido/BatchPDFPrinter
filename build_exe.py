@@ -11,23 +11,17 @@ tkdnd_dir = os.path.dirname(tkinterdnd2.__file__)
 # Konfigurasi args PyInstaller
 args = [
     'app.py',
-    '--name=BatchPDFPrinter', # Nama file hasil .exe
+    '--name=BatchPDFPrinter-Portable', # Nama file hasil .exe
     '--windowed',             # Hilangkan layar hitam CMD di belakang
     '--noconfirm',            # Timpa file yang sudah ada
     '--clean',                # Bersihkan cache sebelum build
-    
-    
-    
-    
-    
+    '--onefile',              # BUNGKUS MENJADI 1 FILE .EXE SAJA
     f'--add-data={ctk_dir};customtkinter/', # Masukkan aset UI
-    
-    
-    
-    
     f'--add-data={tkdnd_dir};tkinterdnd2/', # Masukkan library Drag n Drop
     '--add-data=bin/SumatraPDF.exe;bin/',   # Masukkan mesin printer
     '--add-data=icon.ico;.',                # Bundle icon untuk app.py runtime
+    '--hidden-import=reportlab',            # Untuk engine watermark
+    '--hidden-import=pypdf',                # Untuk memanipulasi PDF
     '--icon=icon.ico',                      # Set logo untuk file .exe
 ]
 
