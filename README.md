@@ -12,7 +12,9 @@ Tersedia 2 pilihan file di halaman download tersebut:
 
 ## 🌟 Key Features
 
-* **Drag & Drop Interface**: Easily drag multiple PDF files or entire folders into the application.
+* **File Import via Drag & Drop**: Easily drag multiple PDF files or entire folders into the application.
+* **Drag & Drop Reordering**: Grab the `☰` grip handle next to any document to seamlessly drag and drop files into your preferred printing order.
+* **Dynamic PDF Watermarking**: Apply custom text watermarks to your documents on-the-fly. Adjust text, color, and opacity from the Settings menu, and preview the stamp before printing.
 * **Table View with Auto-Page Count**: Displays a clean list of queued documents along with their exact page counts and modification dates.
 * **Live Visual Print Preview**: A dynamic canvas in the Settings menu that visually demonstrates how your document will fit on the paper based on your orientation, dimensions, and scaling choices.
 * **Single Print Job (Auto-Merge)**: Optionally merge hundreds of PDFs into a single continuous print job to prevent other users from interrupting your print queue on a shared network printer.
@@ -41,7 +43,7 @@ Tersedia 2 pilihan file di halaman download tersebut:
 
 2. Install the required Python dependencies:
    ```bash
-   pip install customtkinter pypdf pywin32 tkinterdnd2
+   pip install customtkinter pypdf pywin32 tkinterdnd2 reportlab
    ```
 
 ## 🚀 Usage
@@ -59,13 +61,13 @@ To compile the application into a single, standalone executable that can be shar
    ```bash
    pip install pyinstaller
    ```
-2. Run the build command (it will automatically bundle the UI libraries and `SumatraPDF.exe`):
+2. We have provided an automated build script. Simply run:
    ```bash
-   pyinstaller --noconfirm --onedir --windowed --add-data "C:/Users/Egogohub/AppData/Local/Programs/Python/Python311/Lib/site-packages/customtkinter;customtkinter/" --add-data "C:/Users/Egogohub/AppData/Local/Programs/Python/Python311/Lib/site-packages/tkinterdnd2;tkinterdnd2/" --add-data "bin/SumatraPDF.exe;bin/" app.py
+   python build_exe.py
    ```
-   *(Note: Ensure the paths to `customtkinter` and `tkinterdnd2` match your actual Python installation path).*
+   *(This script will automatically detect your python environment, include all necessary libraries like `reportlab` and `customtkinter`, and generate the `.exe` file).*
 
-3. The final `.exe` application will be located inside the `dist/app/` folder.
+3. The final compiled standalone application will be located at `dist/BatchPDFPrinter-Portable.exe`.
 
 ## 📝 License
 
