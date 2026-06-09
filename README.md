@@ -4,6 +4,11 @@ Batch PDF Printer is a powerful, Python-based desktop application designed to st
 
 It utilizes `SumatraPDF` under the hood to perform ultra-fast, silent background printing without cluttering your screen with popup windows.
 
+## 📥 Download (Ready to Use)
+[**⬇️ Download BatchPDFPrinter (Windows .exe)**](https://github.com/maulido/BatchPDFPrinter/releases/latest)
+
+*Simply download the latest `.zip` file from the Releases page, extract it, and run `BatchPDFPrinter.exe`. No installation or Python required!*
+
 ## 🌟 Key Features
 
 * **Drag & Drop Interface**: Easily drag multiple PDF files or entire folders into the application.
