@@ -48,13 +48,14 @@ class BatchPDFPrinterApp(TkinterDnD_CTk):
         # Start background printer status monitor
         self.check_printer_status()
 
-        # Patch messagebox to always center on this window
-        self._patch_messagebox()
+        # Patch all dialogs to always center on this window
+        self._patch_dialogs()
 
         # Save settings on close
         self.protocol("WM_DELETE_WINDOW", self.on_closing)
 
-    def _patch_messagebox(self):
+    def _patch_dialogs(self):
+        # Patch messagebox
         _orig_showinfo = messagebox.showinfo
         _orig_showerror = messagebox.showerror
         _orig_showwarning = messagebox.showwarning
@@ -64,6 +65,15 @@ class BatchPDFPrinterApp(TkinterDnD_CTk):
         messagebox.showerror = lambda title, message, **kwargs: _orig_showerror(title, message, parent=self, **kwargs)
         messagebox.showwarning = lambda title, message, **kwargs: _orig_showwarning(title, message, parent=self, **kwargs)
         messagebox.askyesno = lambda title, message, **kwargs: _orig_askyesno(title, message, parent=self, **kwargs)
+
+        # Patch filedialog
+        _orig_askopenfilenames = filedialog.askopenfilenames
+        _orig_askdirectory = filedialog.askdirectory
+        _orig_asksaveasfilename = filedialog.asksaveasfilename
+
+        filedialog.askopenfilenames = lambda **kwargs: _orig_askopenfilenames(parent=self, **kwargs)
+        filedialog.askdirectory = lambda **kwargs: _orig_askdirectory(parent=self, **kwargs)
+        filedialog.asksaveasfilename = lambda **kwargs: _orig_asksaveasfilename(parent=self, **kwargs)
 
     def center_window(self, win, width, height):
         win.update_idletasks()

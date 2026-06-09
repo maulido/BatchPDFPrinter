@@ -18,7 +18,9 @@ args = [
     
     
     
+    
     f'--add-data={ctk_dir};customtkinter/', # Masukkan aset UI
+    
     
     
     f'--add-data={tkdnd_dir};tkinterdnd2/', # Masukkan library Drag n Drop
