@@ -55,7 +55,6 @@ class BatchPDFPrinterApp(TkinterDnD_CTk):
         printer_name = self.printer_var.get()
         if not printer_name or printer_name == "No Printer Found":
             self.printer_status_var.set("Status: No Printer Selected")
-            self.after(2000, self.check_printer_status)
             return
             
         try:
@@ -88,8 +87,6 @@ class BatchPDFPrinterApp(TkinterDnD_CTk):
                 
         except Exception:
             self.printer_status_var.set("Status: 🔴 Unknown / Unreachable")
-            
-        self.after(2000, self.check_printer_status)
 
     def get_sumatra_path(self):
         # When bundled with PyInstaller, the base path is sys._MEIPASS
@@ -180,7 +177,7 @@ class BatchPDFPrinterApp(TkinterDnD_CTk):
         default_printer = win32print.GetDefaultPrinter()
         
         self.printer_var = ctk.StringVar(value=default_printer if default_printer in printers else (printers[0] if printers else "No Printer Found"))
-        self.printer_dropdown = ctk.CTkOptionMenu(bottom_frame, values=printers, variable=self.printer_var, width=250)
+        self.printer_dropdown = ctk.CTkOptionMenu(bottom_frame, values=printers, variable=self.printer_var, width=250, command=lambda _: self.check_printer_status())
         self.printer_dropdown.grid(row=0, column=1, padx=5, pady=(15, 0), sticky="w")
         
         self.printer_status_var = ctk.StringVar(value="Status: 🔍 Checking...")
