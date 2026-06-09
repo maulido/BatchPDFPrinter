@@ -55,16 +55,11 @@ class BatchPDFPrinterApp(TkinterDnD_CTk):
         self.protocol("WM_DELETE_WINDOW", self.on_closing)
 
     def _patch_dialogs(self):
-        # Patch messagebox
-        _orig_showinfo = messagebox.showinfo
-        _orig_showerror = messagebox.showerror
-        _orig_showwarning = messagebox.showwarning
-        _orig_askyesno = messagebox.askyesno
-
-        messagebox.showinfo = lambda title, message, **kwargs: _orig_showinfo(title, message, parent=self, **kwargs)
-        messagebox.showerror = lambda title, message, **kwargs: _orig_showerror(title, message, parent=self, **kwargs)
-        messagebox.showwarning = lambda title, message, **kwargs: _orig_showwarning(title, message, parent=self, **kwargs)
-        messagebox.askyesno = lambda title, message, **kwargs: _orig_askyesno(title, message, parent=self, **kwargs)
+        # Patch messagebox to use custom CTkToplevel
+        messagebox.showinfo = lambda title, message, **kwargs: self.custom_messagebox(title, message, "Info")
+        messagebox.showerror = lambda title, message, **kwargs: self.custom_messagebox(title, message, "Error")
+        messagebox.showwarning = lambda title, message, **kwargs: self.custom_messagebox(title, message, "Warning")
+        messagebox.askyesno = lambda title, message, **kwargs: self.custom_askyesno(title, message)
 
         # Patch filedialog
         _orig_askopenfilenames = filedialog.askopenfilenames
@@ -81,6 +76,47 @@ class BatchPDFPrinterApp(TkinterDnD_CTk):
         x = self.winfo_rootx() + (self.winfo_width() // 2) - (width // 2)
         y = self.winfo_rooty() + (self.winfo_height() // 2) - (height // 2)
         win.geometry(f"{width}x{height}+{x}+{y}")
+
+    def custom_messagebox(self, title, message, type_str):
+        dialog = ctk.CTkToplevel(self)
+        dialog.title(title)
+        self.center_window(dialog, 350, 180)
+        dialog.attributes("-topmost", True)
+        dialog.transient(self)
+        dialog.grab_set()
+        
+        title_lbl = ctk.CTkLabel(dialog, text=type_str, font=ctk.CTkFont(size=16, weight="bold"))
+        title_lbl.pack(pady=(15, 5))
+        
+        lbl = ctk.CTkLabel(dialog, text=message, wraplength=300)
+        lbl.pack(pady=10, padx=10, expand=True)
+        
+        btn = ctk.CTkButton(dialog, text="OK", width=100, command=dialog.destroy)
+        btn.pack(pady=(0, 15))
+        self.wait_window(dialog)
+
+    def custom_askyesno(self, title, message):
+        dialog = ctk.CTkToplevel(self)
+        dialog.title(title)
+        self.center_window(dialog, 350, 180)
+        dialog.attributes("-topmost", True)
+        dialog.transient(self)
+        dialog.grab_set()
+        
+        lbl = ctk.CTkLabel(dialog, text=message, wraplength=300)
+        lbl.pack(pady=20, padx=10, expand=True)
+        
+        result = [False]
+        def on_yes(): result[0] = True; dialog.destroy()
+        def on_no(): result[0] = False; dialog.destroy()
+        
+        btn_frame = ctk.CTkFrame(dialog, fg_color="transparent")
+        btn_frame.pack(pady=(0, 15))
+        ctk.CTkButton(btn_frame, text="Yes", width=80, command=on_yes).pack(side="left", padx=10)
+        ctk.CTkButton(btn_frame, text="No", width=80, command=on_no).pack(side="left", padx=10)
+        
+        self.wait_window(dialog)
+        return result[0]
 
     def check_printer_status(self):
         printer_name = self.printer_var.get()

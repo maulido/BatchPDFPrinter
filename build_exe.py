@@ -19,7 +19,9 @@ args = [
     
     
     
+    
     f'--add-data={ctk_dir};customtkinter/', # Masukkan aset UI
+    
     
     
     
