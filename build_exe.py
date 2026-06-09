@@ -17,7 +17,9 @@ args = [
     '--clean',                # Bersihkan cache sebelum build
     
     
+    
     f'--add-data={ctk_dir};customtkinter/', # Masukkan aset UI
+    
     
     f'--add-data={tkdnd_dir};tkinterdnd2/', # Masukkan library Drag n Drop
     '--add-data=bin/SumatraPDF.exe;bin/',   # Masukkan mesin printer

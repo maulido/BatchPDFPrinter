@@ -48,8 +48,29 @@ class BatchPDFPrinterApp(TkinterDnD_CTk):
         # Start background printer status monitor
         self.check_printer_status()
 
+        # Patch messagebox to always center on this window
+        self._patch_messagebox()
+
         # Save settings on close
         self.protocol("WM_DELETE_WINDOW", self.on_closing)
+
+    def _patch_messagebox(self):
+        _orig_showinfo = messagebox.showinfo
+        _orig_showerror = messagebox.showerror
+        _orig_showwarning = messagebox.showwarning
+        _orig_askyesno = messagebox.askyesno
+
+        messagebox.showinfo = lambda title, message, **kwargs: _orig_showinfo(title, message, parent=self, **kwargs)
+        messagebox.showerror = lambda title, message, **kwargs: _orig_showerror(title, message, parent=self, **kwargs)
+        messagebox.showwarning = lambda title, message, **kwargs: _orig_showwarning(title, message, parent=self, **kwargs)
+        messagebox.askyesno = lambda title, message, **kwargs: _orig_askyesno(title, message, parent=self, **kwargs)
+
+    def center_window(self, win, width, height):
+        win.update_idletasks()
+        # Calculate coordinates relative to the main window
+        x = self.winfo_rootx() + (self.winfo_width() // 2) - (width // 2)
+        y = self.winfo_rooty() + (self.winfo_height() // 2) - (height // 2)
+        win.geometry(f"{width}x{height}+{x}+{y}")
 
     def check_printer_status(self):
         printer_name = self.printer_var.get()
@@ -208,7 +229,7 @@ class BatchPDFPrinterApp(TkinterDnD_CTk):
     def open_settings_dialog(self):
         settings_win = ctk.CTkToplevel(self)
         settings_win.title("Print Settings")
-        settings_win.geometry("800x480")
+        self.center_window(settings_win, 800, 480)
         settings_win.attributes("-topmost", True)
         settings_win.grab_set()
         
@@ -660,8 +681,8 @@ class BatchPDFPrinterApp(TkinterDnD_CTk):
         
         # Create Progress Window
         self.progress_win = ctk.CTkToplevel(self)
-        self.progress_win.title("Printing Process")
-        self.progress_win.geometry("450x150")
+        self.progress_win.title("Printing Status")
+        self.center_window(self.progress_win, 500, 250)
         self.progress_win.attributes("-topmost", True)
         self.progress_win.grab_set()
         
@@ -851,7 +872,7 @@ class BatchPDFPrinterApp(TkinterDnD_CTk):
     def show_print_report(self, success_count, error_count):
         report_win = ctk.CTkToplevel(self)
         report_win.title("Print Report")
-        report_win.geometry("500x400")
+        self.center_window(report_win, 700, 500)
         report_win.attributes("-topmost", True)
         
         lbl = ctk.CTkLabel(report_win, text=f"Printing Complete!\nSuccess: {success_count} | Failed: {error_count}", font=ctk.CTkFont(size=16, weight="bold"))
