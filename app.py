@@ -42,10 +42,52 @@ class BatchPDFPrinterApp(TkinterDnD_CTk):
 
         self.setup_variables()
         self.setup_ui()
+        # Load previous settings
         self.load_settings()
+        
+        # Start background printer status monitor
+        self.check_printer_status()
 
         # Save settings on close
         self.protocol("WM_DELETE_WINDOW", self.on_closing)
+
+    def check_printer_status(self):
+        printer_name = self.printer_var.get()
+        if not printer_name or printer_name == "No Printer Found":
+            self.printer_status_var.set("Status: No Printer Selected")
+            self.after(2000, self.check_printer_status)
+            return
+            
+        try:
+            hprinter = win32print.OpenPrinter(printer_name)
+            info = win32print.GetPrinter(hprinter, 2)
+            status_code = info['Status']
+            win32print.ClosePrinter(hprinter)
+            
+            # Decode common status codes
+            if status_code == 0:
+                self.printer_status_var.set("Status: 🟢 Ready")
+            elif status_code & 0x00000080: # PRINTER_STATUS_OFFLINE
+                self.printer_status_var.set("Status: 🔴 Offline")
+            elif status_code & 0x00000010: # PRINTER_STATUS_PAPER_OUT
+                self.printer_status_var.set("Status: 🔴 Out of Paper")
+            elif status_code & 0x00000002: # PRINTER_STATUS_ERROR
+                self.printer_status_var.set("Status: 🔴 Error")
+            elif status_code & 0x00000008: # PRINTER_STATUS_PAPER_JAM
+                self.printer_status_var.set("Status: 🔴 Paper Jam")
+            elif status_code & 0x00000400: # PRINTER_STATUS_PRINTING
+                self.printer_status_var.set("Status: 🟡 Printing")
+            elif status_code & 0x00000200: # PRINTER_STATUS_BUSY
+                self.printer_status_var.set("Status: 🟡 Busy")
+            elif status_code & 0x00000001: # PRINTER_STATUS_PAUSED
+                self.printer_status_var.set("Status: 🟡 Paused")
+            else:
+                self.printer_status_var.set(f"Status: 🟡 Other (Code {status_code})")
+                
+        except Exception:
+            self.printer_status_var.set("Status: 🔴 Unknown / Unreachable")
+            
+        self.after(2000, self.check_printer_status)
 
     def get_sumatra_path(self):
         # When bundled with PyInstaller, the base path is sys._MEIPASS
@@ -137,7 +179,11 @@ class BatchPDFPrinterApp(TkinterDnD_CTk):
         
         self.printer_var = ctk.StringVar(value=default_printer if default_printer in printers else (printers[0] if printers else "No Printer Found"))
         self.printer_dropdown = ctk.CTkOptionMenu(bottom_frame, values=printers, variable=self.printer_var, width=250)
-        self.printer_dropdown.grid(row=0, column=1, padx=5, pady=15, sticky="w")
+        self.printer_dropdown.grid(row=0, column=1, padx=5, pady=(15, 0), sticky="w")
+        
+        self.printer_status_var = ctk.StringVar(value="Status: 🔍 Checking...")
+        self.printer_status_label = ctk.CTkLabel(bottom_frame, textvariable=self.printer_status_var, font=ctk.CTkFont(size=12), text_color="gray")
+        self.printer_status_label.grid(row=1, column=1, padx=10, pady=(0, 10), sticky="nw")
 
         # Right side actions
         right_actions_frame = ctk.CTkFrame(bottom_frame, fg_color="transparent")
