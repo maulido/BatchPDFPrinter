@@ -26,6 +26,12 @@ class BatchPDFPrinterApp(TkinterDnD_CTk):
         self.title("Batch PDF Printer")
         self.geometry("900x600")
         self.minsize(900, 500)
+        
+        # Set icon
+        try:
+            self.iconbitmap(os.path.join(os.path.dirname(os.path.abspath(__file__)), "icon.ico"))
+        except Exception:
+            pass
 
         # Get the path to SumatraPDF
         self.sumatra_path = self.get_sumatra_path()
