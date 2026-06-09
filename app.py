@@ -281,12 +281,40 @@ class BatchPDFPrinterApp(TkinterDnD_CTk):
         self.destroy()
 
     def check_for_updates(self):
-        # Nantinya logika ini bisa dihubungkan ke internet (misal GitHub/Google Drive Anda)
+        import urllib.request
+        import json
+        import webbrowser
+        from packaging import version
+        
         CURRENT_VERSION = "1.0.0"
-        messagebox.showinfo(
-            "Check for Updates", 
-            f"Versi saat ini: v{CURRENT_VERSION}\n\nAnda sedang menggunakan versi terbaru aplikasi. Tidak ada pembaruan yang tersedia saat ini."
-        )
+        url = "https://api.github.com/repos/maulido/BatchPDFPrinter/releases/latest"
+        
+        try:
+            req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+            with urllib.request.urlopen(req, timeout=5) as response:
+                data = json.loads(response.read().decode())
+                
+            latest_version = data.get("tag_name", "").lstrip("v")
+            html_url = data.get("html_url", "")
+            
+            if latest_version and version.parse(latest_version) > version.parse(CURRENT_VERSION):
+                answer = messagebox.askyesno(
+                    "Update Available", 
+                    f"Versi baru (v{latest_version}) tersedia!\n\nVersi saat ini: v{CURRENT_VERSION}\n\nApakah Anda ingin mengunduh pembaruan ini sekarang?"
+                )
+                if answer and html_url:
+                    webbrowser.open(html_url)
+            else:
+                messagebox.showinfo(
+                    "Check for Updates", 
+                    f"Versi saat ini: v{CURRENT_VERSION}\n\nAnda sedang menggunakan versi terbaru aplikasi. Tidak ada pembaruan yang tersedia saat ini."
+                )
+        except Exception as e:
+            # If no releases are found (e.g. 404 because no release has been made yet)
+            messagebox.showinfo(
+                "Check for Updates", 
+                f"Versi saat ini: v{CURRENT_VERSION}\n\nBelum ada rilis versi terbaru di server atau tidak ada koneksi internet."
+            )
 
     def on_paper_change(self, choice):
         if hasattr(self, 'custom_paper_frame') and self.custom_paper_frame.winfo_exists():
