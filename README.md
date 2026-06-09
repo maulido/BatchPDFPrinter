@@ -2,12 +2,13 @@
 
 Batch PDF Printer is a powerful, Python-based desktop application designed to streamline the process of printing multiple PDF documents. Inspired by enterprise solutions like Print Conductor, this tool offers a modern, dark-mode ready User Interface built with `customtkinter`.
 
-It utilizes `SumatraPDF` under the hood to perform ultra-fast, silent background printing without cluttering your screen with popup windows.
-
 ## 📥 Download (Ready to Use)
-[**⬇️ Download BatchPDFPrinter (Windows .exe)**](https://github.com/maulido/BatchPDFPrinter/releases/latest)
+Kini tersedia dalam 2 versi untuk kemudahan Anda:
 
-*Simply download the latest `.zip` file from the Releases page, extract it, and run `BatchPDFPrinter.exe`. No installation or Python required!*
+*   [**⬇️ Download Versi Installer (BatchPDFPrinter-Setup.exe)**](https://github.com/maulido/BatchPDFPrinter/releases/latest) - *Rekomendasi!* Menginstal aplikasi di komputer Anda, membuat *shortcut* Desktop, dan memuat aplikasi dalam hitungan milidetik.
+*   [**⬇️ Download Versi Portable (BatchPDFPrinter-Portable.exe)**](https://github.com/maulido/BatchPDFPrinter/releases/latest) - *Praktis!* Hanya 1 file `.exe`, tanpa perlu instalasi, langsung jalan. Cocok dibawa di Flashdisk.
+
+*(Silakan kunjungi link di atas dan unduh file `.exe` yang Anda inginkan dari menu Releases).*
 
 ## 🌟 Key Features
 
