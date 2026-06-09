@@ -62,13 +62,15 @@ class BatchPDFPrinterApp(TkinterDnD_CTk):
             hprinter = win32print.OpenPrinter(printer_name)
             info = win32print.GetPrinter(hprinter, 2)
             status_code = info['Status']
+            attributes = info['Attributes']
             win32print.ClosePrinter(hprinter)
             
             # Decode common status codes
-            if status_code == 0:
+            # Windows caching often leaves status=0 but sets WORK_OFFLINE (0x400) in Attributes
+            if status_code & 0x00000080 or attributes & 0x00000400: # PRINTER_STATUS_OFFLINE or PRINTER_ATTRIBUTE_WORK_OFFLINE
+                self.printer_status_var.set("Status: 🔴 Offline / Disconnected")
+            elif status_code == 0:
                 self.printer_status_var.set("Status: 🟢 Ready")
-            elif status_code & 0x00000080: # PRINTER_STATUS_OFFLINE
-                self.printer_status_var.set("Status: 🔴 Offline")
             elif status_code & 0x00000010: # PRINTER_STATUS_PAPER_OUT
                 self.printer_status_var.set("Status: 🔴 Out of Paper")
             elif status_code & 0x00000002: # PRINTER_STATUS_ERROR
