@@ -1011,6 +1011,10 @@ class BatchPDFPrinterApp(TkinterDnD_CTk):
                             os.remove(target_pdf)
                         except:
                             pass
+                    
+                    # Beri jeda 0.5 detik agar spooler Windows tidak kewalahan
+                    import time
+                    time.sleep(0.5)
                 except subprocess.CalledProcessError as e:
                     print(f"Failed to print {pdf}: {e}")
                     self.print_log.append({"file": filename, "status": "Failed", "error": f"Return Code {e.returncode}"})
@@ -1021,6 +1025,26 @@ class BatchPDFPrinterApp(TkinterDnD_CTk):
                     print(f"Unexpected error printing {pdf}:\n{error_msg}")
                     self.print_log.append({"file": filename, "status": "Failed", "error": str(e)})
                     error_count += 1
+                    
+        # --- WAIT FOR SPOOLER TO FINISH ---
+        if success_count > 0:
+            self.after(0, update_progress, "Menunggu printer menyelesaikan tugas fisik...", 0.99)
+            try:
+                import win32print
+                import time
+                hprinter = win32print.OpenPrinter(printer_name)
+                try:
+                    # Tunggu maksimal 5 menit (300 detik) sampai antrean kosong
+                    max_wait = 300 
+                    for _ in range(max_wait):
+                        jobs = win32print.EnumJobs(hprinter, 0, -1, 1)
+                        if len(jobs) == 0:
+                            break
+                        time.sleep(1)
+                finally:
+                    win32print.ClosePrinter(hprinter)
+            except Exception as e:
+                print(f"Error monitoring spooler: {e}")
 
         self.after(0, self.print_finished, success_count, error_count)
 
